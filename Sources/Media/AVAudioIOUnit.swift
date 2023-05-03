@@ -96,7 +96,18 @@ final class AVAudioIOUnit: NSObject, AVIOUnit {
         mixer.session.addOutput(output)
         output.setSampleBufferDelegate(self, queue: lockQueue)
     }
-    #endif
+
+    func dispose() {
+        input = nil
+        output = nil
+        audioFormat = nil
+    }
+#else
+    func dispose() {
+        playerNode = nil
+        audioFormat = nil
+    }
+#endif
 
     func registerEffect(_ effect: AudioEffect) -> Bool {
         codec.effects.insert(effect).inserted

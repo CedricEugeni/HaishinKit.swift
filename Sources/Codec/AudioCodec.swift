@@ -52,7 +52,7 @@ public class AudioCodec {
     /// The default bitrate for an AudioCidec, the value is 32000.
     public static let defaultBitrate: UInt32 = 32 * 1000
     /// The default channels for an AudioCodec, the value is 0 means  according to a input source.
-    public static let defaultChannels: UInt32 = 0
+    public static let defaultChannels: UInt32 = 1
     /// The default sampleRate for an AudioCodec, the value is 0 means according to a input source.
     public static let defaultSampleRate: Double = 0
     /// The default mamimu buffers for an AudioCodec.

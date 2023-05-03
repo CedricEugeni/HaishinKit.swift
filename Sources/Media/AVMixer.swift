@@ -15,6 +15,7 @@ protocol AVMixerDelegate: AnyObject {
     func mixer(_ mixer: AVMixer, didOutput video: CMSampleBuffer)
 }
 
+
 /// An object that mixies audio and video for streaming.
 public class AVMixer {
     /// The default fps for an AVMixer, value is 30.
@@ -131,26 +132,14 @@ public class AVMixer {
             guard sessionPreset != oldValue else {
                 return
             }
-            session.beginConfiguration()
-            session.sessionPreset = sessionPreset
-            session.commitConfiguration()
         }
     }
 
-    private var _session: AVCaptureSession?
-    /// The capture session instance.
+    private static var _session: AVCaptureSession = AVCaptureMultiCamSession.isMultiCamSupported ? AVCaptureMultiCamSession() : AVCaptureSession()
     public var session: AVCaptureSession {
-        get {
-            if _session == nil {
-                _session = AVCaptureSession()
-                _session?.sessionPreset = .default
-            }
-            return _session!
-        }
-        set {
-            _session = newValue
-        }
+        Self._session
     }
+    var isSecondary: Bool = false
     #endif
     /// The recorder instance.
     public lazy var recorder = AVRecorder()
@@ -218,11 +207,20 @@ public class AVMixer {
 
     #if os(iOS) || os(macOS)
     deinit {
-        if let session = _session, session.isRunning {
+        dispose(shouldCleanSession: !isSecondary)
+    }
+#endif
+
+
+    public func dispose(shouldCleanSession: Bool = true) {
+#if os(iOS) || os(macOS)
+        if session.isRunning && shouldCleanSession {
             session.stopRunning()
         }
+#endif
+        audioIO.dispose()
+        videoIO.dispose()
     }
-    #endif
 }
 
 extension AVMixer {
@@ -295,7 +293,7 @@ extension AVMixer: Running {
     }
 
     public func stopRunning() {
-        guard isRunning.value else {
+        guard isRunning.value && !isSecondary else {
             return
         }
         session.stopRunning()
@@ -315,3 +313,244 @@ extension AVMixer: Running {
     }
 }
 #endif
+
+extension AVMixer {
+    struct ExceededCaptureSessionCosts: OptionSet {
+        let rawValue: Int
+
+        static let systemPressureCost = ExceededCaptureSessionCosts(rawValue: 1 << 0)
+        static let hardwareCost = ExceededCaptureSessionCosts(rawValue: 1 << 1)
+    }
+    
+//    func checkSystemCost() {
+//        var exceededSessionCosts: ExceededCaptureSessionCosts = []
+//
+//        if session.systemPressureCost > 1.0 {
+//            exceededSessionCosts.insert(.systemPressureCost)
+//        }
+//
+//        if session.hardwareCost > 1.0 {
+//            exceededSessionCosts.insert(.hardwareCost)
+//        }
+//
+//        switch exceededSessionCosts {
+//
+//        case .systemPressureCost:
+//            // Choice #1: Reduce front camera resolution
+//            if reduceResolutionForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice 2: Reduce the number of video input ports
+//            else if reduceVideoInputPorts() {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #3: Reduce back camera resolution
+//            else if reduceResolutionForCamera(.back) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #4: Reduce front camera frame rate
+//            else if reduceFrameRateForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #5: Reduce frame rate of back camera
+//            else if reduceFrameRateForCamera(.back) {
+//                checkSystemCost()
+//            } else {
+//                print("Unable to further reduce session cost.")
+//            }
+//
+//        case .hardwareCost:
+//            // Choice #1: Reduce front camera resolution
+//            if reduceResolutionForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice 2: Reduce back camera resolution
+//            else if reduceResolutionForCamera(.back) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #3: Reduce front camera frame rate
+//            else if reduceFrameRateForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #4: Reduce back camera frame rate
+//            else if reduceFrameRateForCamera(.back) {
+//                checkSystemCost()
+//            } else {
+//                print("Unable to further reduce session cost.")
+//            }
+//
+//        case [.systemPressureCost, .hardwareCost]:
+//            // Choice #1: Reduce front camera resolution
+//            if reduceResolutionForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #2: Reduce back camera resolution
+//            else if reduceResolutionForCamera(.back) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #3: Reduce front camera frame rate
+//            else if reduceFrameRateForCamera(.front) {
+//                checkSystemCost()
+//            }
+//
+//            // Choice #4: Reduce back camera frame rate
+//            else if reduceFrameRateForCamera(.back) {
+//                checkSystemCost()
+//            } else {
+//                print("Unable to further reduce session cost.")
+//            }
+//
+//        default:
+//            break
+//        }
+//    }
+//
+//    func reduceResolutionForCamera(_ position: AVCaptureDevice.Position) -> Bool {
+//        for connection in session.connections {
+//            for inputPort in connection.inputPorts {
+//                if inputPort.mediaType == .video && inputPort.sourceDevicePosition == position {
+//                    guard let videoDeviceInput: AVCaptureDeviceInput = inputPort.input as? AVCaptureDeviceInput else {
+//                        return false
+//                    }
+//
+//                    var dims: CMVideoDimensions
+//
+//                    var width: Int32
+//                    var height: Int32
+//                    var activeWidth: Int32
+//                    var activeHeight: Int32
+//
+//                    dims = CMVideoFormatDescriptionGetDimensions(videoDeviceInput.device.activeFormat.formatDescription)
+//                    activeWidth = dims.width
+//                    activeHeight = dims.height
+//
+//                    if ( activeHeight <= 480 ) && ( activeWidth <= 640 ) {
+//                        return false
+//                    }
+//
+//                    let formats = videoDeviceInput.device.formats
+//                    if let formatIndex = formats.firstIndex(of: videoDeviceInput.device.activeFormat) {
+//
+//                        for index in (0..<formatIndex).reversed() {
+//                            let format = videoDeviceInput.device.formats[index]
+//                            if format.isMultiCamSupported {
+//                                dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+//                                width = dims.width
+//                                height = dims.height
+//
+//                                if width < activeWidth || height < activeHeight {
+//                                    do {
+//                                        try videoDeviceInput.device.lockForConfiguration()
+//                                        videoDeviceInput.device.activeFormat = format
+//
+//                                        videoDeviceInput.device.unlockForConfiguration()
+//
+//                                        print("reduced width = \(width), reduced height = \(height)")
+//
+//                                        return true
+//                                    } catch {
+//                                        print("Could not lock device for configuration: \(error)")
+//
+//                                        return false
+//                                    }
+//
+//                                } else {
+//                                    continue
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//
+//        return false
+//    }
+//
+//    func reduceFrameRateForCamera(_ position: AVCaptureDevice.Position) -> Bool {
+//        for connection in session.connections {
+//            for inputPort in connection.inputPorts {
+//
+//                if inputPort.mediaType == .video && inputPort.sourceDevicePosition == position {
+//                    guard let videoDeviceInput: AVCaptureDeviceInput = inputPort.input as? AVCaptureDeviceInput else {
+//                        return false
+//                    }
+//                    let activeMinFrameDuration = videoDeviceInput.device.activeVideoMinFrameDuration
+//                    var activeMaxFrameRate: Double = Double(activeMinFrameDuration.timescale) / Double(activeMinFrameDuration.value)
+//                    activeMaxFrameRate -= 10.0
+//
+//                    // Cap the device frame rate to this new max, never allowing it to go below 15 fps
+//                    if activeMaxFrameRate >= 15.0 {
+//                        do {
+//                            try videoDeviceInput.device.lockForConfiguration()
+//                            videoDeviceInput.videoMinFrameDurationOverride = CMTimeMake(value: 1, timescale: Int32(activeMaxFrameRate))
+//
+//                            videoDeviceInput.device.unlockForConfiguration()
+//
+//                            print("reduced fps = \(activeMaxFrameRate)")
+//
+//                            return true
+//                        } catch {
+//                            print("Could not lock device for configuration: \(error)")
+//                            return false
+//                        }
+//                    } else {
+//                        return false
+//                    }
+//                }
+//            }
+//        }
+//
+//        return false
+//    }
+//
+//    func reduceVideoInputPorts () -> Bool {
+//        var newConnection: AVCaptureConnection
+//        var result = false
+//
+//        for connection in session.connections {
+//            for inputPort in connection.inputPorts where inputPort.sourceDeviceType == .builtInDualCamera {
+//                print("Changing input from dual to single camera")
+//
+//                guard let videoDeviceInput: AVCaptureDeviceInput = inputPort.input as? AVCaptureDeviceInput,
+//                    let wideCameraPort: AVCaptureInput.Port = videoDeviceInput.ports(for: .video,
+//                                                                                     sourceDeviceType: .builtInWideAngleCamera,
+//                                                                                     sourceDevicePosition: videoDeviceInput.device.position).first else {
+//                                                                                        return false
+//                }
+//
+//                if let previewLayer = connection.videoPreviewLayer {
+//                    newConnection = AVCaptureConnection(inputPort: wideCameraPort, videoPreviewLayer: previewLayer)
+//                } else if let savedOutput = connection.output {
+//                    newConnection = AVCaptureConnection(inputPorts: [wideCameraPort], output: savedOutput)
+//                } else {
+//                    continue
+//                }
+//                session.beginConfiguration()
+//
+//                session.removeConnection(connection)
+//
+//                if session.canAddConnection(newConnection) {
+//                    session.addConnection(newConnection)
+//
+//                    session.commitConfiguration()
+//                    result = true
+//                } else {
+//                    print("Could not add new connection to the session")
+//                    session.commitConfiguration()
+//                    return false
+//                }
+//            }
+//        }
+//        return result
+//    }
+}

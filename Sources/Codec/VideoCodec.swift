@@ -45,8 +45,10 @@ public class VideoCodec {
         case width
         /// Specifies the height of video.
         case height
-        /// Specifies the bitrate.
-        case bitrate
+        /// Specifies the average bitrate.
+        case averageBitrate
+        /// Specifies the max bitrate.
+        case maxBitrate
         /// Specifies the H264 profile level.
         case profileLevel
         #if os(macOS)
@@ -67,8 +69,10 @@ public class VideoCodec {
                 return \VideoCodec.width
             case .height:
                 return \VideoCodec.height
-            case .bitrate:
-                return \VideoCodec.bitrate
+            case .averageBitrate:
+                return \VideoCodec.averageBitrate
+            case .maxBitrate:
+                return \VideoCodec.maxBitrate
             #if os(macOS)
             case .enabledHardwareEncoder:
                 return \VideoCodec.enabledHardwareEncoder
@@ -144,12 +148,20 @@ public class VideoCodec {
         }
     }
     #endif
-    var bitrate: UInt32 = VideoCodec.defaultBitrate {
+    var averageBitrate: UInt32 = VideoCodec.defaultBitrate {
         didSet {
-            guard bitrate != oldValue else {
+            guard averageBitrate != oldValue else {
                 return
             }
-            setProperty(kVTCompressionPropertyKey_AverageBitRate, Int(bitrate) as CFTypeRef)
+            setProperty(kVTCompressionPropertyKey_AverageBitRate, Int(averageBitrate) as CFTypeRef)
+        }
+    }
+    var maxBitrate: UInt32 = VideoCodec.defaultBitrate {
+        didSet {
+            guard maxBitrate != oldValue else {
+                return
+            }
+            setProperty(kVTCompressionPropertyKey_DataRateLimits, [Int(maxBitrate), 1] as CFArray)
         }
     }
     var profileLevel: String = kVTProfileLevel_H264_Baseline_3_1 as String {
@@ -217,7 +229,8 @@ public class VideoCodec {
         var properties: [NSString: NSObject] = [
             kVTCompressionPropertyKey_RealTime: kCFBooleanTrue,
             kVTCompressionPropertyKey_ProfileLevel: profileLevel as NSObject,
-            kVTCompressionPropertyKey_AverageBitRate: Int(bitrate) as NSObject,
+            kVTCompressionPropertyKey_AverageBitRate: Int(averageBitrate) as NSObject,
+            kVTCompressionPropertyKey_DataRateLimits: [maxBitrate, 1] as NSObject,
             kVTCompressionPropertyKey_ExpectedFrameRate: NSNumber(value: expectedFPS),
             kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration: NSNumber(value: maxKeyFrameIntervalDuration),
             kVTCompressionPropertyKey_AllowFrameReordering: (allowFrameReordering ?? !isBaseline) as NSObject,

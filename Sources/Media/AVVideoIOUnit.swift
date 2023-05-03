@@ -1,6 +1,10 @@
 import AVFoundation
 import CoreImage
 
+public extension Notification.Name {
+    static let didFailAddingCameraInput = Notification.Name("didFailAddingCameraInput")
+}
+
 final class AVVideoIOUnit: NSObject, AVIOUnit {
     static let defaultAttributes: [NSString: NSObject] = [
         kCVPixelBufferPixelFormatTypeKey: NSNumber(value: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange),
@@ -43,6 +47,8 @@ final class AVVideoIOUnit: NSObject, AVIOUnit {
         return decoder
     }()
     weak var mixer: AVMixer?
+//    var deviceInput : AVCaptureDeviceInput?
+    private let dataOutputQueue = DispatchQueue(label: "data output queue")
 
     private(set) var effects: Set<VideoEffect> = []
 
@@ -270,11 +276,10 @@ final class AVVideoIOUnit: NSObject, AVIOUnit {
             if let oldValue: AVCaptureInput = oldValue {
                 mixer.session.removeInput(oldValue)
             }
-            if let input: AVCaptureInput = input, mixer.session.canAddInput(input) {
-                mixer.session.addInput(input)
-            }
         }
     }
+
+    var cameraVideoDataOutputConnection: AVCaptureConnection?
     #endif
 
     #if os(iOS)
@@ -306,22 +311,39 @@ final class AVVideoIOUnit: NSObject, AVIOUnit {
 
     #if os(iOS) || os(macOS)
     func attachCamera(_ camera: AVCaptureDevice?) throws {
-        guard let mixer: AVMixer = mixer else {
+        guard let mixer: AVMixer = mixer, let camera = camera else {
+            mixer?.mediaSync = .passthrough
+            dispose()
             return
         }
 
         mixer.session.beginConfiguration()
-        defer {
-            mixer.session.commitConfiguration()
-            if torch {
-                setTorchMode(.on)
+
+        if #available(iOS 16, *) {
+            if mixer.session.isMultitaskingCameraAccessSupported && !mixer.session.isMultitaskingCameraAccessEnabled {
+                mixer.session.isMultitaskingCameraAccessEnabled = true
             }
         }
+        defer {
+            mixer.session.commitConfiguration()
+//            if torch {
+//                setTorchMode(.on)
+//            }
+        }
 
-        output = nil
-        guard let camera: AVCaptureDevice = camera else {
-            mixer.mediaSync = .passthrough
-            input = nil
+        // Add the camera input to the session
+        do {
+            input = try AVCaptureDeviceInput(device: camera)
+
+            guard let cameraDeviceInput = input, mixer.session.canAddInput(cameraDeviceInput) else {
+                print("AVVIDEOIOUNIT: Could not add camera device input")
+                NotificationCenter.default.post(name: .didFailAddingCameraInput, object: .none)
+                return
+            }
+            mixer.session.addInputWithNoConnections(cameraDeviceInput)
+            print("AVVIDEOIOUNIT: added input to session")
+        } catch {
+            print("Could not create front camera device input: \(error)")
             return
         }
 
@@ -330,26 +352,47 @@ final class AVVideoIOUnit: NSObject, AVIOUnit {
         screen = nil
         #endif
 
-        input = try AVCaptureDeviceInput(device: camera)
-        mixer.session.addOutput(output)
-
-        for connection in output.connections {
-            if connection.isVideoOrientationSupported {
-                connection.videoOrientation = orientation
-            }
-            if connection.isVideoMirroringSupported {
-                connection.isVideoMirrored = isVideoMirrored
-            }
-            #if os(iOS)
-            connection.preferredVideoStabilizationMode = preferredVideoStabilizationMode
-            #endif
+        // Find the camera device input's video port
+        guard let cameraDeviceInput = input as? AVCaptureDeviceInput, let cameraVideoPort = cameraDeviceInput.ports(for: .video, sourceDeviceType: camera.deviceType, sourceDevicePosition: camera.position).first else {
+            print("Could not find the camera device input's video port")
+            return
         }
 
-        output.setSampleBufferDelegate(self, queue: lockQueue)
+        // Add the camera video data output
+        output = AVCaptureVideoDataOutput()
+        guard mixer.session.canAddOutput(output) else {
+            print("Could not add the camera video data output")
+            return
+        }
+        mixer.session.addOutputWithNoConnections(output)
+        // Check if CVPixelFormat Lossy or Lossless Compression is supported
 
+        if output.availableVideoPixelFormatTypes.contains(kCVPixelFormatType_Lossy_32BGRA) {
+            // Set the Lossy format
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_Lossy_32BGRA)]
+        } else if output.availableVideoPixelFormatTypes.contains(kCVPixelFormatType_Lossless_32BGRA) {
+            // Set the Lossless format
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_Lossless_32BGRA)]
+        } else {
+            // Set to the fallback format
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)]
+        }
+
+        output.setSampleBufferDelegate(self, queue: dataOutputQueue)
         fps *= 1
         position = camera.position
         drawable?.position = camera.position
+
+        // Connect the front camera device input to the front camera video data output
+        cameraVideoDataOutputConnection = AVCaptureConnection(inputPorts: [cameraVideoPort], output: output)
+        guard let connection = cameraVideoDataOutputConnection, mixer.session.canAddConnection(connection) else {
+            print("Could not add a connection to the camera video data output")
+            return
+        }
+        mixer.session.addConnection(connection)
+        connection.videoOrientation = orientation
+        connection.automaticallyAdjustsVideoMirroring = false
+        connection.isVideoMirrored = false
     }
 
     func setTorchMode(_ torchMode: AVCaptureDevice.TorchMode) {
@@ -364,6 +407,32 @@ final class AVVideoIOUnit: NSObject, AVIOUnit {
         } catch let error as NSError {
             logger.error("while setting torch: \(error)")
         }
+    }
+
+    func dispose() {
+        if Thread.isMainThread {
+            self.drawable?.attachStream(nil)
+        } else {
+            DispatchQueue.main.sync {
+                self.drawable?.attachStream(nil)
+            }
+        }
+
+        if let c = cameraVideoDataOutputConnection, mixer?.session.isRunning ?? false, c.isEnabled, c.isActive {
+            mixer?.session.removeConnection(c)
+        }
+        if let i = input {
+            DispatchQueue.main.async {
+                self.mixer?.session.removeInput(i)
+            }
+            debugPrint("AVVIDEOIOUNIT: removed input from session")
+        }
+        if let o = output {
+            mixer?.session.removeOutput(o)
+        }
+        input = nil
+        output = nil
+        cameraVideoDataOutputConnection = nil
     }
     #endif
 

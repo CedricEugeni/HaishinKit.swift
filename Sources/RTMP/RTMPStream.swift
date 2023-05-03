@@ -296,12 +296,13 @@ open class RTMPStream: NetStream {
     private var rtmpConnection: RTMPConnection
 
     /// Creates a new stream.
-    public init(connection: RTMPConnection) {
+    public init(connection: RTMPConnection, isSecondary: Bool = false) {
         self.rtmpConnection = connection
         super.init()
         dispatcher = EventDispatcher(target: self)
         addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
         rtmpConnection.addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
+        mixer.isSecondary = isSecondary
         if rtmpConnection.connected {
             rtmpConnection.createStream(self)
         }
@@ -435,7 +436,8 @@ open class RTMPStream: NetStream {
             metadata["height"] = mixer.videoIO.encoder.height
             metadata["framerate"] = mixer.videoIO.fps
             metadata["videocodecid"] = FLVVideoCodec.avc.rawValue
-            metadata["videodatarate"] = mixer.videoIO.encoder.bitrate / 1000
+            metadata["videodatarate"] = mixer.videoIO.encoder.averageBitrate / 1000
+            metadata["videomaxdatarate"] = mixer.videoIO.encoder.maxBitrate / 1000
         }
         if let _: AVCaptureInput = mixer.audioIO.input {
             metadata["audiocodecid"] = FLVAudioCodec.aac.rawValue

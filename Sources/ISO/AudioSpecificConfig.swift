@@ -135,6 +135,16 @@ struct AudioSpecificConfig {
         case frontCenterAndFrontLeftAndFrontRightAndBackLeftAndBackRight = 5
         case frontCenterAndFrontLeftAndFrontRightAndBackLeftAndBackRightLFE = 6
         case frontCenterAndFrontLeftAndFrontRightAndSideLeftAndSideRightAndBackLeftAndBackRightLFE = 7
+
+        case ch8 = 8
+        case ch9  = 9
+        case ch10 = 10
+        case ch11 = 11
+        case ch12 = 12
+        case ch13 = 13
+        case ch14 = 14
+        case ch15 = 15
+        case ch16 = 16
     }
 
     let type: AudioObjectType
