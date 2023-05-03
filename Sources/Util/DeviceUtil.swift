@@ -53,6 +53,13 @@ extension AVCaptureDevice.Format {
 
 /// The namespace of DeviceUtil.
 public enum DeviceUtil {
+    /// Lookup device by position.
+    public static func device(with position: AVCaptureDevice.Position) -> AVCaptureDevice? {
+        AVCaptureDevice.devices().first {
+            $0.hasMediaType(.video) && $0.position == position
+        }
+    }
+
     /// Lookup device by localizedName and mediaType.
     public static func device(withLocalizedName: String, mediaType: AVMediaType) -> AVCaptureDevice? {
         AVCaptureDevice.devices().first {

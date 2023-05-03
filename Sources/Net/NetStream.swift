@@ -280,6 +280,10 @@ open class NetStream: NSObject {
     public func stopRecording() {
         mixer.recorder.stopRunning()
     }
+
+    open func dispose() {
+        mixer.dispose(shouldCleanSession: false)
+    }
 }
 
 extension NetStream: IOScreenCaptureUnitDelegate {

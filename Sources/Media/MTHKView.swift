@@ -24,7 +24,7 @@ public class MTHKView: MTKView {
         return device?.makeCommandQueue()
     }()
 
-    private weak var currentStream: NetStream? {
+    public weak var currentStream: NetStream? {
         didSet {
             oldValue?.mixer.videoIO.drawable = nil
             if let currentStream = currentStream {

@@ -247,7 +247,7 @@ open class RTMPStream: NetStream {
     private weak var rtmpConnection: RTMPConnection?
 
     /// Creates a new stream.
-    public init(connection: RTMPConnection) {
+    public init(connection: RTMPConnection, isSecondary: Bool = false) {
         self.rtmpConnection = connection
         super.init()
         dispatcher = EventDispatcher(target: self)
