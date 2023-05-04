@@ -141,6 +141,7 @@ public final class IOVideoUnit: NSObject, IOUnit {
         }
         guard let device else {
             mixer.mediaSync = .passthrough
+            try? capture.detachSession(mixer.session)
             return
         }
         mixer.mediaSync = .video
