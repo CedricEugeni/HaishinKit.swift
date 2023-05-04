@@ -254,6 +254,7 @@ open class RTMPStream: NetStream {
         connection.streams.append(self)
         addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
         rtmpConnection?.addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
+        mixer.isSecondary = isSecondary
         if rtmpConnection?.connected == true {
             rtmpConnection?.createStream(self)
         }

@@ -4,7 +4,7 @@ import AVFoundation
 import SwiftPMSupport
 #endif
 
-final class IOAudioUnit: NSObject, IOUnit {
+public final class IOAudioUnit: NSObject, IOUnit {
     lazy var codec: AudioCodec = {
         var codec = AudioCodec()
         codec.lockQueue = lockQueue
@@ -16,7 +16,7 @@ final class IOAudioUnit: NSObject, IOUnit {
             soundTransform.apply(mixer?.mediaLink.playerNode)
         }
     }
-    var muted = false
+    public var muted = false
     weak var mixer: IOMixer?
     #if os(iOS) || os(macOS)
     private(set) var capture: IOAudioCaptureUnit = .init()
@@ -50,6 +50,17 @@ final class IOAudioUnit: NSObject, IOUnit {
         mixer.session.automaticallyConfiguresApplicationAudioSession = automaticallyConfiguresApplicationAudioSession
         #endif
     }
+
+//    func dispose() {
+//        input = nil
+//        output = nil
+//        audioFormat = nil
+//    }
+//    #else
+//    func dispose() {
+//        playerNode = nil
+//        audioFormat = nil
+//    }
     #endif
 
     func appendSampleBuffer(_ sampleBuffer: CMSampleBuffer) {
@@ -167,7 +178,7 @@ extension IOAudioUnit: IOUnitDecoding {
 #if os(iOS) || os(macOS)
 extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
     // MARK: AVCaptureAudioDataOutputSampleBufferDelegate
-    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard mixer?.useSampleBuffer(sampleBuffer: sampleBuffer, mediaType: AVMediaType.audio) == true else {
             return
         }
@@ -178,10 +189,10 @@ extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
 
 extension IOAudioUnit: AudioCodecDelegate {
     // MARK: AudioConverterDelegate
-    func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
+    public func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
         do {
             mixer?.audioFormat = audioFormat
             if let audioEngine = mixer?.audioEngine, audioEngine.isRunning == false {
@@ -192,7 +203,7 @@ extension IOAudioUnit: AudioCodecDelegate {
         }
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
         guard let audioBuffer = audioBuffer as? AVAudioPCMBuffer else {
             return
         }

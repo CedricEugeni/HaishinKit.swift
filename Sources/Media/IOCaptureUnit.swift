@@ -207,6 +207,10 @@ public class IOVideoCaptureUnit: IOCaptureUnit {
         }
         output?.setSampleBufferDelegate(videoUnit, queue: videoUnit?.lockQueue)
     }
+
+    func dispose(videoUnit: IOVideoUnit) {
+        try? attachDevice(nil, videoUnit: videoUnit)
+    }
 }
 
 class IOAudioCaptureUnit: IOCaptureUnit {

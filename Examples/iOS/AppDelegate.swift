@@ -1,9 +1,9 @@
 import AVFoundation
 import HaishinKit
-import Logboard
+//import Logboard
 import UIKit
 
-let logger = LBLogger.with("com.haishinkit.Exsample.iOS")
+//let logger = LBLogger.with("com.haishinkit.Exsample.iOS")
 
 @UIApplicationMain
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -16,7 +16,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
             try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
             try session.setActive(true)
         } catch {
-            logger.error(error)
+//            logger.error(error)
         }
         return true
     }

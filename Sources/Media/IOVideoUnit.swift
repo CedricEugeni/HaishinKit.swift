@@ -1,7 +1,7 @@
 import AVFoundation
 import CoreImage
 
-final class IOVideoUnit: NSObject, IOUnit {
+public final class IOVideoUnit: NSObject, IOUnit {
     enum Error: Swift.Error {
         case multiCamNotSupported
     }
@@ -43,7 +43,7 @@ final class IOVideoUnit: NSObject, IOUnit {
 
     weak var mixer: IOMixer?
 
-    var muted = false
+    public var muted = false
 
     private(set) var effects: Set<VideoEffect> = []
 
@@ -161,7 +161,7 @@ final class IOVideoUnit: NSObject, IOUnit {
             return
         }
         guard let device else {
-            mixer.isMultiCamSessionEnabled = false
+//            mixer.isMultiCamSessionEnabled = false
             mixer.session.beginConfiguration()
             defer {
                 mixer.session.commitConfiguration()
@@ -170,7 +170,7 @@ final class IOVideoUnit: NSObject, IOUnit {
             try multiCamCapture.attachDevice(nil, videoUnit: self)
             return
         }
-        mixer.isMultiCamSessionEnabled = true
+//        mixer.isMultiCamSessionEnabled = true
         mixer.session.beginConfiguration()
         defer {
             mixer.session.commitConfiguration()
@@ -317,7 +317,7 @@ extension IOVideoUnit: IOUnitDecoding {
 #if os(iOS) || os(macOS)
 extension IOVideoUnit: AVCaptureVideoDataOutputSampleBufferDelegate {
     // MARK: AVCaptureVideoDataOutputSampleBufferDelegate
-    func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    public func captureOutput(_ captureOutput: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         if capture.output == captureOutput {
             guard mixer?.useSampleBuffer(sampleBuffer: sampleBuffer, mediaType: AVMediaType.video) == true else {
                 return
@@ -332,18 +332,18 @@ extension IOVideoUnit: AVCaptureVideoDataOutputSampleBufferDelegate {
 
 extension IOVideoUnit: VideoCodecDelegate {
     // MARK: VideoCodecDelegate
-    func videoCodec(_ codec: VideoCodec, didOutput formatDescription: CMFormatDescription?) {
+    public func videoCodec(_ codec: VideoCodec, didOutput formatDescription: CMFormatDescription?) {
     }
 
-    func videoCodec(_ codec: VideoCodec, didOutput sampleBuffer: CMSampleBuffer) {
+    public func videoCodec(_ codec: VideoCodec, didOutput sampleBuffer: CMSampleBuffer) {
         drawable?.enqueue(sampleBuffer)
     }
 
-    func videoCodec(_ codec: VideoCodec, errorOccurred error: VideoCodec.Error) {
+    public func videoCodec(_ codec: VideoCodec, errorOccurred error: VideoCodec.Error) {
         logger.trace(error)
     }
 
-    func videoCodecWillDropFame(_ codec: VideoCodec) -> Bool {
+    public func videoCodecWillDropFame(_ codec: VideoCodec) -> Bool {
         return false
     }
 }

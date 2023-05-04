@@ -82,18 +82,19 @@ public class IOMixer {
     }()
 
     #if os(iOS) || os(macOS)
-    var isMultitaskingCameraAccessEnabled = true
+//    var isMultitaskingCameraAccessEnabled = true
+    var isSecondary: Bool = false
 
-    var isMultiCamSessionEnabled = false {
-        didSet {
-            guard oldValue != isMultiCamSessionEnabled else {
-                return
-            }
-            #if os(iOS)
-            session = makeSession()
-            #endif
-        }
-    }
+//    var isMultiCamSessionEnabled = false {
+//        didSet {
+//            guard oldValue != isMultiCamSessionEnabled else {
+//                return
+//            }
+//            #if os(iOS)
+//            session = makeSession()
+//            #endif
+//        }
+//    }
 
     var sessionPreset: AVCaptureSession.Preset = .default {
         didSet {
@@ -107,21 +108,39 @@ public class IOMixer {
     }
 
     /// The capture session instance.
-    public internal(set) lazy var session: AVCaptureSession = makeSession() {
-        didSet {
-            if oldValue.isRunning {
-                removeSessionObservers(oldValue)
-                oldValue.stopRunning()
-            }
-            audioIO.capture.detachSession(oldValue)
-            videoIO.capture.detachSession(oldValue)
-            if session.canSetSessionPreset(sessionPreset) {
-                session.sessionPreset = sessionPreset
-            }
-            audioIO.capture.attachSession(session)
-            videoIO.capture.attachSession(session)
-        }
-    }
+//    public internal(set) lazy var session: AVCaptureSession = makeSession() {
+//        didSet {
+//            if oldValue.isRunning {
+//                removeSessionObservers(oldValue)
+//                oldValue.stopRunning()
+//            }
+//            audioIO.capture.detachSession(oldValue)
+//            videoIO.capture.detachSession(oldValue)
+//            if session.canSetSessionPreset(sessionPreset) {
+//                session.sessionPreset = sessionPreset
+//            }
+//            audioIO.capture.attachSession(session)
+//            videoIO.capture.attachSession(session)
+//        }
+//    }
+    private static let _session: AVCaptureSession = AVCaptureMultiCamSession.isMultiCamSupported ? AVCaptureMultiCamSession() : AVCaptureSession()
+    public var session: AVCaptureSession { Self._session }
+//        get { Self._session }
+//        set {
+//            Self._session = newValue
+//            if oldValue.isRunning {
+//                removeSessionObservers(oldValue)
+//                oldValue.stopRunning()
+//            }
+//            audioIO.capture.detachSession(oldValue)
+//            videoIO.capture.detachSession(oldValue)
+//            if session.canSetSessionPreset(sessionPreset) {
+//                session.sessionPreset = sessionPreset
+//            }
+//            audioIO.capture.attachSession(_session)
+//            videoIO.capture.attachSession(_session)
+//        }
+//    }
     #endif
     public private(set) var isRunning: Atomic<Bool> = .init(false)
     /// The recorder instance.
@@ -141,13 +160,13 @@ public class IOMixer {
 
     weak var delegate: IOMixerDelegate?
 
-    lazy var audioIO: IOAudioUnit = {
+    public lazy var audioIO: IOAudioUnit = {
         var audioIO = IOAudioUnit()
         audioIO.mixer = self
         return audioIO
     }()
 
-    lazy var videoIO: IOVideoUnit = {
+    public lazy var videoIO: IOVideoUnit = {
         var videoIO = IOVideoUnit()
         videoIO.mixer = self
         return videoIO
@@ -159,14 +178,35 @@ public class IOMixer {
         return mediaLink
     }()
 
+    init() {
+        if session.canSetSessionPreset(sessionPreset) {
+            session.sessionPreset = sessionPreset
+        }
+        audioIO.capture.attachSession(session)
+        videoIO.capture.attachSession(session)
+    }
+
     #if os(iOS) || os(macOS)
     deinit {
-        if session.isRunning {
-            session.stopRunning()
-        }
-        IOMixer.audioEngineHolder.release(audioEngine)
+        dispose(shouldCleanSession: !isSecondary)
+//        if session.isRunning {
+//            session.stopRunning()
+//        }
+//        IOMixer.audioEngineHolder.release(audioEngine)
     }
     #endif
+
+    public func dispose(shouldCleanSession: Bool = true) {
+        #if os(iOS) || os(macOS)
+        if session.isRunning && shouldCleanSession {
+            session.stopRunning()
+        }
+        #endif
+
+        IOMixer.audioEngineHolder.release(audioEngine)
+        try? audioIO.attachAudio(nil, automaticallyConfiguresApplicationAudioSession: false)
+        try? videoIO.attachCamera(nil)
+    }
 
     private var audioTimeStamp = CMTime.zero
     private var videoTimeStamp = CMTime.zero
@@ -206,33 +246,33 @@ public class IOMixer {
         }
     }
 
-    #if os(iOS)
-    private func makeSession() -> AVCaptureSession {
-        let session: AVCaptureSession
-        if isMultiCamSessionEnabled, #available(iOS 13.0, *) {
-            session = AVCaptureMultiCamSession()
-        } else {
-            session = AVCaptureSession()
-        }
-        if session.canSetSessionPreset(sessionPreset) {
-            session.sessionPreset = sessionPreset
-        }
-        if #available(iOS 16.0, *), isMultitaskingCameraAccessEnabled, session.isMultitaskingCameraAccessSupported {
-            session.isMultitaskingCameraAccessEnabled = true
-        }
-        return session
-    }
-    #endif
-
-    #if os(macOS)
-    private func makeSession() -> AVCaptureSession {
-        let session = AVCaptureSession()
-        if session.canSetSessionPreset(sessionPreset) {
-            session.sessionPreset = sessionPreset
-        }
-        return session
-    }
-    #endif
+//    #if os(iOS)
+//    private func makeSession() -> AVCaptureSession {
+//        let session: AVCaptureSession
+//        if isMultiCamSessionEnabled, #available(iOS 13.0, *) {
+//            session = AVCaptureMultiCamSession()
+//        } else {
+//            session = AVCaptureSession()
+//        }
+//        if session.canSetSessionPreset(sessionPreset) {
+//            session.sessionPreset = sessionPreset
+//        }
+//        if #available(iOS 16.0, *), isMultitaskingCameraAccessEnabled, session.isMultitaskingCameraAccessSupported {
+//            session.isMultitaskingCameraAccessEnabled = true
+//        }
+//        return session
+//    }
+//    #endif
+//
+//    #if os(macOS)
+//    private func makeSession() -> AVCaptureSession {
+//        let session = AVCaptureSession()
+//        if session.canSetSessionPreset(sessionPreset) {
+//            session.sessionPreset = sessionPreset
+//        }
+//        return session
+//    }
+//    #endif
 }
 
 extension IOMixer: IOUnitEncoding {
@@ -311,7 +351,7 @@ extension IOMixer: Running {
     }
 
     public func stopRunning() {
-        guard isRunning.value else {
+        guard isRunning.value && !isSecondary else {
             return
         }
         removeSessionObservers(session)
