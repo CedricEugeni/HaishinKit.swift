@@ -336,7 +336,7 @@ extension IOVideoUnit: VideoCodecDelegate {
     public func videoCodec(_ codec: VideoCodec, didOutput formatDescription: CMFormatDescription?) {
     }
 
-    func videoCodec(_ codec: VideoCodec, didOutput sampleBuffer: CMSampleBuffer) {
+    public func videoCodec(_ codec: VideoCodec, didOutput sampleBuffer: CMSampleBuffer) {
         mixer?.mediaLink.enqueueVideo(sampleBuffer)
     }
 
