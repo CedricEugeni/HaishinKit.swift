@@ -240,7 +240,7 @@ open class RTMPStream: NetStream {
     private let muxer = RTMPMuxer()
     private var messages: [RTMPCommandMessage] = []
     private var frameCount: UInt16 = 0
-    private var dispatcher: EventDispatcherConvertible!
+    private var dispatcher: (any EventDispatcherConvertible)!
     private var audioWasSent = false
     private var videoWasSent = false
     private var howToPublish: RTMPStream.HowToPublish = .live
@@ -388,7 +388,9 @@ open class RTMPStream: NetStream {
             metadata["width"] = mixer.videoIO.codec.settings.videoSize.width
             metadata["height"] = mixer.videoIO.codec.settings.videoSize.height
             metadata["framerate"] = mixer.videoIO.frameRate
-            metadata["videocodecid"] = FLVVideoCodec.avc.rawValue
+            if mixer.videoIO.codec.settings.format == .h264 {
+                metadata["videocodecid"] = FLVVideoCodec.avc.rawValue
+            }
             metadata["videodatarate"] = mixer.videoIO.codec.settings.bitRate / 1000
         }
         if mixer.audioIO.capture.device != nil {

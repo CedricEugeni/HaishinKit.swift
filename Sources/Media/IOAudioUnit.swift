@@ -71,7 +71,7 @@ public final class IOAudioUnit: NSObject, IOUnit {
         if isFragmented(sampleBuffer), let sampleBuffer = makeSampleBuffer(sampleBuffer) {
             appendSampleBuffer(sampleBuffer)
         }
-        mixer?.recorder.appendSampleBuffer(sampleBuffer, mediaType: .audio)
+        mixer?.recorder.appendSampleBuffer(sampleBuffer)
         codec.appendSampleBuffer(sampleBuffer)
         presentationTimeStamp = CMTimeAdd(presentationTimeStamp, CMTime(value: CMTimeValue(sampleBuffer.numSamples), timescale: presentationTimeStamp.timescale))
     }
@@ -143,7 +143,7 @@ public final class IOAudioUnit: NSObject, IOUnit {
 
 extension IOAudioUnit: IOUnitEncoding {
     // MARK: IOUnitEncoding
-    func startEncoding(_ delegate: AVCodecDelegate) {
+    func startEncoding(_ delegate: any AVCodecDelegate) {
         codec.delegate = delegate
         codec.startRunning()
     }

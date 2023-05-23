@@ -42,7 +42,7 @@ open class NetStream: NSObject {
     /// The mixer object.
     public private(set) var mixer = IOMixer()
     /// Specifies the delegate of the NetStream.
-    public weak var delegate: NetStreamDelegate?
+    public weak var delegate: (any NetStreamDelegate)?
 
     /// Specifies the context object.
     public var context: CIContext {
@@ -271,7 +271,7 @@ open class NetStream: NSObject {
     }
 
     /// Starts recording.
-    public func startRecording(_ settings: [AVMediaType: [String: Any]]) {
+    public func startRecording(_ settings: [AVMediaType: [String: Any]] = IORecorder.defaultOutputSettings) {
         mixer.recorder.outputSettings = settings
         mixer.recorder.startRunning()
     }
@@ -288,7 +288,7 @@ open class NetStream: NSObject {
 
 extension NetStream: IOScreenCaptureUnitDelegate {
     // MARK: IOScreenCaptureUnitDelegate
-    public func session(_ session: IOScreenCaptureUnit, didOutput pixelBuffer: CVPixelBuffer, presentationTime: CMTime) {
+    public func session(_ session: any IOScreenCaptureUnit, didOutput pixelBuffer: CVPixelBuffer, presentationTime: CMTime) {
         var timingInfo = CMSampleTimingInfo(
             duration: .invalid,
             presentationTimeStamp: presentationTime,

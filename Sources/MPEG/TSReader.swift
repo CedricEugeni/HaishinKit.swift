@@ -11,7 +11,7 @@ public protocol TSReaderDelegate: AnyObject {
 /// The TSReader class represents read MPEG-2 transport stream data.
 public class TSReader {
     /// Specifies the delegate object.
-    public weak var delegate: TSReaderDelegate?
+    public weak var delegate: (any TSReaderDelegate)?
 
     private var pat: TSProgramAssociation? {
         didSet {
@@ -38,7 +38,7 @@ public class TSReader {
             }
         }
     }
-    private var nalUnitReader = NALUnitReader()
+    private var nalUnitReader = AVCNALUnitReader()
     private var programs: [UInt16: UInt16] = [:]
     private var esSpecData: [UInt16: ESSpecificData] = [:]
     private var formatDescriptions: [UInt16: CMFormatDescription] = [:]

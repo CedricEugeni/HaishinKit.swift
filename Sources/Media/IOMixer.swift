@@ -147,7 +147,7 @@ public class IOMixer {
     public lazy var recorder = IORecorder()
 
     /// Specifies the drawable object.
-    public weak var drawable: NetStreamDrawable? {
+    public weak var drawable: (any NetStreamDrawable)? {
         get {
             videoIO.drawable
         }
@@ -158,7 +158,7 @@ public class IOMixer {
 
     var mediaSync = MediaSync.passthrough
 
-    weak var delegate: IOMixerDelegate?
+    weak var delegate: (any IOMixerDelegate)?
 
     public lazy var audioIO: IOAudioUnit = {
         var audioIO = IOAudioUnit()
@@ -277,7 +277,7 @@ public class IOMixer {
 
 extension IOMixer: IOUnitEncoding {
     /// Starts encoding for video and audio data.
-    public func startEncoding(_ delegate: AVCodecDelegate) {
+    public func startEncoding(_ delegate: any AVCodecDelegate) {
         guard readyState == .standby else {
             return
         }
@@ -326,7 +326,7 @@ extension IOMixer: IOUnitDecoding {
 extension IOMixer: MediaLinkDelegate {
     // MARK: MediaLinkDelegate
     func mediaLink(_ mediaLink: MediaLink, dequeue sampleBuffer: CMSampleBuffer) {
-        videoIO.codec.appendSampleBuffer(sampleBuffer)
+        drawable?.enqueue(sampleBuffer)
     }
 
     func mediaLink(_ mediaLink: MediaLink, didBufferingChanged: Bool) {
