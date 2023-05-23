@@ -229,7 +229,6 @@ public class VideoCodec {
         var properties: [NSString: NSObject] = [
             kVTCompressionPropertyKey_RealTime: kCFBooleanTrue,
             kVTCompressionPropertyKey_ProfileLevel: profileLevel as NSObject,
-            kVTCompressionPropertyKey_AverageBitRate: Int(averageBitrate) as NSObject,
             kVTCompressionPropertyKey_DataRateLimits: [maxBitrate, 1] as NSObject,
             kVTCompressionPropertyKey_ExpectedFrameRate: NSNumber(value: expectedFPS),
             kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration: NSNumber(value: maxKeyFrameIntervalDuration),
@@ -252,6 +251,13 @@ public class VideoCodec {
         if !isBaseline {
             properties[kVTCompressionPropertyKey_H264EntropyMode] = kVTH264EntropyMode_CABAC
         }
+
+        if #available(iOS 16.0, tvOS 16.0, macOS 13.0, *) {
+            properties[kVTCompressionPropertyKey_ConstantBitRate] = Int(averageBitrate) as NSObject
+        } else {
+            properties[kVTCompressionPropertyKey_AverageBitRate] = Int(averageBitrate) as NSObject
+        }
+
         return properties
     }
 
