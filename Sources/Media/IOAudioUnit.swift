@@ -4,7 +4,7 @@ import AVFoundation
 import SwiftPMSupport
 #endif
 
-final class IOAudioUnit: NSObject, IOUnit {
+public final class IOAudioUnit: NSObject, IOUnit {
     private static let defaultPresentationTimeStamp: CMTime = .invalid
     private static let sampleBuffersThreshold: Int = 1
 
@@ -19,7 +19,7 @@ final class IOAudioUnit: NSObject, IOUnit {
             soundTransform.apply(mixer?.mediaLink.playerNode)
         }
     }
-    var muted = false
+    public var muted = false
     weak var mixer: IOMixer?
     var loopback = false {
         didSet {
@@ -152,7 +152,7 @@ extension IOAudioUnit: IOUnitDecoding {
 #if os(iOS) || os(macOS)
 extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
     // MARK: AVCaptureAudioDataOutputSampleBufferDelegate
-    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard mixer?.useSampleBuffer(sampleBuffer: sampleBuffer, mediaType: AVMediaType.audio) == true else {
             return
         }
@@ -163,10 +163,10 @@ extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
 
 extension IOAudioUnit: AudioCodecDelegate {
     // MARK: AudioConverterDelegate
-    func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
+    public func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
         do {
             mixer?.audioFormat = audioFormat
             if let audioEngine = mixer?.audioEngine, audioEngine.isRunning == false {
@@ -177,7 +177,7 @@ extension IOAudioUnit: AudioCodecDelegate {
         }
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
         guard let audioBuffer = audioBuffer as? AVAudioPCMBuffer else {
             return
         }

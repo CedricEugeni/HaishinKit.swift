@@ -162,7 +162,7 @@ public class IOMixer {
 
     weak var delegate: (any IOMixerDelegate)?
 
-    lazy var audioIO: IOAudioUnit = {
+    public lazy var audioIO: IOAudioUnit = {
         var audioIO = IOAudioUnit()
         audioIO.mixer = self
         return audioIO

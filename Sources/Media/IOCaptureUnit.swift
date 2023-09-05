@@ -12,6 +12,8 @@ protocol IOCaptureUnit {
     var input: AVCaptureInput? { get set }
     var output: Output? { get set }
     var connection: AVCaptureConnection? { get set }
+
+    func dispose()
 }
 
 extension IOCaptureUnit {
@@ -208,6 +210,12 @@ public class IOVideoCaptureUnit: IOCaptureUnit {
         }
         output?.setSampleBufferDelegate(videoUnit, queue: videoUnit?.lockQueue)
     }
+
+    func dispose() {
+        input = nil
+        output = nil
+        connection = nil
+    }
 }
 
 class IOAudioCaptureUnit: IOCaptureUnit {
@@ -236,6 +244,12 @@ class IOAudioCaptureUnit: IOCaptureUnit {
 
     func setSampleBufferDelegate(_ audioUnit: IOAudioUnit?) {
         output?.setSampleBufferDelegate(audioUnit, queue: audioUnit?.lockQueue)
+    }
+
+    func dispose() {
+        input = nil
+        output = nil
+        connection = nil
     }
 }
 #endif
