@@ -305,6 +305,10 @@ open class NetStream: NSObject {
         mixer.recorder.stopRunning()
     }
 
+    open func dispose() {
+        mixer.dispose(shouldCleanSession: false)
+    }
+
     #if os(iOS)
     @objc
     private func didEnterBackground(_ notification: Notification) {
