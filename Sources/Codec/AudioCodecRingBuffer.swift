@@ -2,6 +2,25 @@ import Accelerate
 import AVFoundation
 import Foundation
 
+public extension AVAudioCommonFormat {
+    public var label: String {
+        switch self {
+        case .otherFormat:
+            return "other"
+        case .pcmFormatFloat32:
+            return "pcm float32"
+        case .pcmFormatFloat64:
+            return "pcm float64"
+        case .pcmFormatInt16:
+            return "pcm int16"
+        case .pcmFormatInt32:
+            return "PCM INT32"
+        @unknown default:
+            return "unknown"
+        }
+    }
+}
+
 final class AudioCodecRingBuffer {
     enum Error: Swift.Error {
         case isReady
@@ -82,6 +101,16 @@ final class AudioCodecRingBuffer {
             }
         }
         let numSamples = min(self.numSamples - index, Int(sampleBuffer.numSamples) - offset)
+
+        if #available(iOS 17.0, *) {
+            if SampleData.shared.interleaved != format.isInterleaved {
+                SampleData.shared.interleaved = format.isInterleaved
+            }
+            if SampleData.shared.commonFormat != format.commonFormat {
+                SampleData.shared.commonFormat = format.commonFormat
+            }
+        }
+
         if format.isInterleaved {
             let channelCount = Int(format.channelCount)
             switch format.commonFormat {

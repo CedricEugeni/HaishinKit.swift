@@ -99,6 +99,13 @@ public class AudioCodec {
                 return
             }
             let numSamples = ringBuffer.appendSampleBuffer(sampleBuffer, offset: offset)
+            if #available(iOS 17.0, *) {
+                SampleData.shared.append(numSamples)
+                if SampleData.shared.audioStreamBasicDescription == nil || SampleData.shared.audioStreamBasicDescription?.mChannelsPerFrame != inSourceFormat?.mChannelsPerFrame {
+                    SampleData.shared.audioStreamBasicDescription = inSourceFormat
+                }
+            }
+
             if ringBuffer.isReady {
                 guard let buffer = getOutputBuffer() else {
                     return

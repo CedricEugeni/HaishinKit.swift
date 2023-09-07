@@ -1,4 +1,5 @@
 import AVFoundation
+import SwiftUI
 
 #if canImport(SwiftPMSupport)
 import SwiftPMSupport
@@ -185,5 +186,61 @@ extension IOAudioUnit: AudioCodecDelegate {
             mixer.delegate?.mixer(mixer, didOutput: audioBuffer, presentationTimeStamp: presentationTimeStamp)
         }
         mixer?.mediaLink.enqueueAudio(audioBuffer)
+    }
+}
+
+public struct SampleDataPoint: Identifiable {
+    public let date: Date = Date()
+    public let value: Int
+
+    public var id: Int { Int(date.timeIntervalSince1970) }
+
+    public init(value: Int) {
+        self.value = value
+    }
+}
+
+@available(iOS 17.0, *)
+@Observable public class SampleData {
+    public static let shared = SampleData()
+    public var values: [SampleDataPoint] = []
+    public var audioStreamBasicDescription: AudioStreamBasicDescription? = .none
+    public var commonFormat: AVAudioCommonFormat? = .none
+    public var interleaved: Bool = false
+    var tmpValues: [SampleDataPoint] = []
+    var refreshCount = 0
+
+    public var inter: String {
+        var value: String = ""
+
+        if interleaved {
+            value = "true"
+        } else {
+            value = "false"
+        }
+
+        return value
+    }
+
+    public init() {}
+
+    public init(values: [SampleDataPoint]) {
+        self.values = values
+    }
+
+    func append(_ value: Int) {
+        let point = SampleDataPoint(value: value)
+        tmpValues.append(point)
+        refreshCount += 1
+
+        if tmpValues.count > 200 {
+            tmpValues.removeFirst()
+        }
+
+        if self.refreshCount > 200 {
+            self.refreshCount = 0
+            self.values = []
+            self.values = self.tmpValues
+        }
     }
 }
