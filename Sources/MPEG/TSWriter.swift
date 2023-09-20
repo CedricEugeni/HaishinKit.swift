@@ -81,7 +81,7 @@ public class TSWriter: Running {
         self.segmentDuration = segmentDuration
     }
 
-    public func startRunning() {
+    public func startRunning(name: String? = nil) {
         guard isRunning.value else {
             return
         }

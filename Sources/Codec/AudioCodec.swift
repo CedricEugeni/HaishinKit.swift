@@ -216,7 +216,7 @@ public class AudioCodec {
 
 extension AudioCodec: Running {
     // MARK: Running
-    public func startRunning() {
+    public func startRunning(name: String? = nil) {
         lockQueue.async {
             guard !self.isRunning.value else {
                 return

@@ -342,7 +342,7 @@ extension IOMixer: MediaLinkDelegate {
 #if os(iOS) || os(macOS)
 extension IOMixer: Running {
     // MARK: Running
-    public func startRunning() {
+    public func startRunning(name: String? = nil) {
         guard !isRunning.value else {
             return
         }

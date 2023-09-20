@@ -295,9 +295,9 @@ open class NetStream: NSObject {
     }
 
     /// Starts recording.
-    public func startRecording(_ settings: [AVMediaType: [String: Any]] = IORecorder.defaultOutputSettings) {
+    public func startRecording(with name: String? = nil, settings: [AVMediaType: [String: Any]] = IORecorder.defaultOutputSettings) {
         mixer.recorder.outputSettings = settings
-        mixer.recorder.startRunning()
+        mixer.recorder.startRunning(name: name)
     }
 
     /// Stop recording.
