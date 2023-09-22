@@ -149,7 +149,7 @@ extension MediaLink: ChoreographerDelegate {
 
 extension MediaLink: Running {
     // MARK: Running
-    func startRunning() {
+    func startRunning(name: String? = nil) {
         lockQueue.async {
             guard !self.isRunning.value else {
                 return
@@ -157,7 +157,7 @@ extension MediaLink: Running {
             self.hasVideo = false
             self.bufferingTime = Self.bufferingTime
             self.isBuffering = true
-            self.choreographer.startRunning()
+            self.choreographer.startRunning(name: name)
             self.makeBufferkQueue()
             self.isRunning.mutate { $0 = true }
         }

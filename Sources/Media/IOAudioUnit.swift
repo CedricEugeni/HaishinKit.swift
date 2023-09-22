@@ -1,4 +1,5 @@
 import AVFoundation
+import SwiftUI
 
 #if canImport(SwiftPMSupport)
 import SwiftPMSupport
@@ -16,7 +17,7 @@ final class IOAudioUnit: NSObject, IOUnit {
             soundTransform.apply(mixer?.mediaLink.playerNode)
         }
     }
-    var muted = false
+    public var muted = false
     weak var mixer: IOMixer?
     var isMonitoringEnabled = false {
         didSet {
@@ -105,7 +106,7 @@ extension IOAudioUnit: IOUnitDecoding {
 #if os(iOS) || os(macOS)
 extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
     // MARK: AVCaptureAudioDataOutputSampleBufferDelegate
-    func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+    public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard mixer?.useSampleBuffer(sampleBuffer: sampleBuffer, mediaType: AVMediaType.audio) == true else {
             return
         }
@@ -116,10 +117,10 @@ extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
 
 extension IOAudioUnit: AudioCodecDelegate {
     // MARK: AudioConverterDelegate
-    func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
+    public func audioCodec(_ codec: AudioCodec, errorOccurred error: AudioCodec.Error) {
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioFormat: AVAudioFormat) {
         do {
             mixer?.audioFormat = audioFormat
             if let audioEngine = mixer?.audioEngine, audioEngine.isRunning == false {
@@ -130,7 +131,7 @@ extension IOAudioUnit: AudioCodecDelegate {
         }
     }
 
-    func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
+    public func audioCodec(_ codec: AudioCodec, didOutput audioBuffer: AVAudioBuffer, presentationTimeStamp: CMTime) {
         guard let audioBuffer = audioBuffer as? AVAudioPCMBuffer else {
             return
         }
@@ -160,5 +161,61 @@ extension IOAudioUnit: IOAudioResamplerDelegate {
         }
         monitor.appendAudioPCMBuffer(audioBuffer)
         codec.appendAudioBuffer(audioBuffer, presentationTimeStamp: presentationTimeStamp)
+    }
+}
+
+public struct SampleDataPoint: Identifiable {
+    public let date: Date = Date()
+    public let value: Int
+
+    public var id: Int { Int(date.timeIntervalSince1970) }
+
+    public init(value: Int) {
+        self.value = value
+    }
+}
+
+@available(iOS 17.0, *)
+@Observable public class SampleData {
+    public static let shared = SampleData()
+    public var values: [SampleDataPoint] = []
+    public var audioStreamBasicDescription: AudioStreamBasicDescription? = .none
+    public var commonFormat: AVAudioCommonFormat? = .none
+    public var interleaved: Bool = false
+    var tmpValues: [SampleDataPoint] = []
+    var refreshCount = 0
+
+    public var inter: String {
+        var value: String = ""
+
+        if interleaved {
+            value = "true"
+        } else {
+            value = "false"
+        }
+
+        return value
+    }
+
+    public init() {}
+
+    public init(values: [SampleDataPoint]) {
+        self.values = values
+    }
+
+    func append(_ value: Int) {
+        let point = SampleDataPoint(value: value)
+        tmpValues.append(point)
+        refreshCount += 1
+
+        if tmpValues.count > 200 {
+            tmpValues.removeFirst()
+        }
+
+        if self.refreshCount > 200 {
+            self.refreshCount = 0
+            self.values = []
+            self.values = self.tmpValues
+        }
     }
 }

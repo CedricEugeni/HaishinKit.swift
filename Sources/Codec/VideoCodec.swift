@@ -189,7 +189,7 @@ public class VideoCodec {
 
 extension VideoCodec: Running {
     // MARK: Running
-    public func startRunning() {
+    public func startRunning(name: String? = nil) {
         lockQueue.async {
             self.isRunning.mutate { $0 = true }
             #if os(iOS)

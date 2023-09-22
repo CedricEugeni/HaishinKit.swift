@@ -270,13 +270,14 @@ open class RTMPStream: NetStream {
     private weak var rtmpConnection: RTMPConnection?
 
     /// Creates a new stream.
-    public init(connection: RTMPConnection) {
+    public init(connection: RTMPConnection, isSecondary: Bool = false) {
         self.rtmpConnection = connection
         super.init()
         dispatcher = EventDispatcher(target: self)
         connection.streams.append(self)
         addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
         rtmpConnection?.addEventListener(.rtmpStatus, selector: #selector(on(status:)), observer: self)
+        mixer.isSecondary = isSecondary
         if rtmpConnection?.connected == true {
             rtmpConnection?.createStream(self)
         }

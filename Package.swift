@@ -5,8 +5,8 @@ import PackageDescription
 let package = Package(
     name: "HaishinKit",
     platforms: [
-        .iOS(.v12),
         .tvOS(.v12),
+        .iOS(.v13),
         .macOS(.v10_13),
         .macCatalyst(.v14)
     ],
