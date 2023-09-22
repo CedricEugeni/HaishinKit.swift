@@ -153,5 +153,11 @@ public class IOVideoCaptureUnit: IOCaptureUnit {
         }
         output?.setSampleBufferDelegate(videoUnit, queue: videoUnit?.lockQueue)
     }
+
+    func dispose() {
+        input = nil
+        output = nil
+        connection = nil
+    }
 }
 #endif

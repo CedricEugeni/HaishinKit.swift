@@ -5,7 +5,7 @@ import SwiftUI
 import SwiftPMSupport
 #endif
 
-final class IOAudioUnit: NSObject, IOUnit {
+public final class IOAudioUnit: NSObject, IOUnit {
     lazy var codec: AudioCodec = {
         var codec = AudioCodec()
         codec.lockQueue = lockQueue
