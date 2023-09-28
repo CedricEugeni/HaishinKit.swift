@@ -72,6 +72,14 @@ final class IOAudioRingBuffer {
 
     func appendAudioPCMBuffer(_ audioPCMBuffer: AVAudioPCMBuffer, offset: Int = 0) {
         let numSamples = min(Int(audioPCMBuffer.frameLength) - offset, Int(buffer.frameLength) - head)
+
+        if #available(iOS 17.0, *) {
+            SampleData.shared.append(numSamples)
+            if SampleData.shared.audioStreamBasicDescription == nil || SampleData.shared.audioStreamBasicDescription?.mChannelsPerFrame != format.channelCount {
+                SampleData.shared.audioStreamBasicDescription = format.streamDescription.pointee
+            }
+        }
+
         if format.isInterleaved {
             let channelCount = Int(format.channelCount)
             switch format.commonFormat {
