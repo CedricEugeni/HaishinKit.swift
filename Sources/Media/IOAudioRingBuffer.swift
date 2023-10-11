@@ -136,7 +136,8 @@ final class IOAudioRingBuffer {
         if 0 <= distance {
             skip = distance
         }
-        appendAudioPCMBuffer(workingBuffer, offset: offsetCount(sampleBuffer) / 8)
+
+        appendAudioPCMBuffer(workingBuffer, offset: offsetCount(sampleBuffer))
     }
 
     func appendAudioPCMBuffer(_ audioPCMBuffer: AVAudioPCMBuffer, offset: Int = 0) {
@@ -278,18 +279,30 @@ final class IOAudioRingBuffer {
     }
 
     private func offsetCount(_ sampleBuffer: CMSampleBuffer) -> Int {
-        let data = sampleBuffer.dataBuffer?.data?.bytes ?? []
-        let count = 0
-        
-        for i in 0..<data.count {
-            guard data.count > i * 2 * 4 else { break }
+        let channelCount = Int(format.channelCount)
 
-            if (data[i * 2 * 4] != 0) {
-                return i * 2 * 4
-            }
+        guard AVAudioSession.sharedInstance().mode == .videoChat && channelCount == 4 else { return 0 }
+
+        let multiplier = format.commonFormat == .pcmFormatInt16 ? 2 : 4
+        let data = sampleBuffer.dataBuffer?.data?.bytes ?? []
+        var count = 0
+
+        for i in 0..<data.count {
+//            guard data.count > i * 2 * 4 else { break }
+
+//            if (data[i * 2 * 4] != 0) {
+//                return i * 2 * 4
+//            }
+            guard data[i] == 0 else { break }
+
+            count += 1
         }
 
-        return count
+        if count == 64 * multiplier * channelCount {
+            return count / (multiplier * channelCount)
+        } else {
+            return 0
+        }
     }
 
 //    private func numSamples(_ sampleBuffer: CMSampleBuffer) -> Int {
