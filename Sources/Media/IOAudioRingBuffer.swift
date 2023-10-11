@@ -48,12 +48,75 @@ final class IOAudioRingBuffer {
             }
         }
         workingBuffer.frameLength = AVAudioFrameCount(sampleBuffer.numSamples)
+
+//        var array: [Int16] = []
+//
+//        if let data = sampleBuffer.dataBuffer!.data {
+//            for byte in data {
+//                array.append(Int16(byte))
+//            }
+//        }
+
+//        debugPrint("========")
+//        debugPrint(array)
+//        debugPrint("numSample = \(sampleBuffer.numSamples)")
+//        debugPrint("totalsamplesize = \(sampleBuffer.totalSampleSize)")
+//        debugPrint("is not sync = \(sampleBuffer.isNotSync)")
+//        debugPrint("dts = \(sampleBuffer.decodeTimeStamp)")
+//        debugPrint("duration = \(sampleBuffer.duration)")
+//        debugPrint("output duration = \(sampleBuffer.outputDuration)")
+//        if let size = try? sampleBuffer.sampleSizes() {
+//            debugPrint("sizes = \(size)")
+//        }
+
+        // 0 - 512 start at 511 "512 - 1"
+//        var start: Int32 = 0
+//        var count: Int32 = Int32(sampleBuffer.numSamples)
+//
+//        if count > 960 && workingBuffer.format.streamDescription.pointee.mChannelsPerFrame == 4 {
+//            start = 127
+//            count = Int32(sampleBuffer.numSamples) - 128
+//        }
+//
+//        let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+//            sampleBuffer,
+//            at: start,
+//            frameCount: count,
+//            into: workingBuffer.mutableAudioBufferList
+//        )
+        //TODO: -
+//        debugPrint("pts = \(sampleBuffer.presentationTimeStamp)")
+//        debugPrint("oPTS = \(sampleBuffer.outputPresentationTimeStamp)")
+//        if sampleBuffer.numSamples > 960 && workingBuffer.format.streamDescription.pointee.mChannelsPerFrame == 4 {
+//            let oldPTS = sampleBuffer.presentationTimeStamp
+//            let newPTS = CMTimeSubtract(oldPTS, CMTime(value: 256, timescale: oldPTS.timescale))
+//
+//            do {
+//                try sampleBuffer.setOutputPresentationTimeStamp(newPTS)
+//            } catch {
+//                debugPrint("error setting PTS = \(error.localizedDescription)")
+//            }
+//        }
+//        debugPrint("pts = \(sampleBuffer.presentationTimeStamp)")
+//        debugPrint("oPTS = \(sampleBuffer.outputPresentationTimeStamp)")
+
         let status = CMSampleBufferCopyPCMDataIntoAudioBufferList(
             sampleBuffer,
             at: 0,
             frameCount: Int32(sampleBuffer.numSamples),
             into: workingBuffer.mutableAudioBufferList
         )
+
+//        let printBuffer = UnsafeBufferPointer(start: workingBuffer.int16ChannelData?.pointee, count: Int(workingBuffer.frameLength))
+//        let pArray = Array<Int16>(printBuffer)
+//        debugPrint(pArray)
+//        let printBuffer = UnsafeBufferPointer(start: buffer.int16ChannelData?.pointee, count: Int(buffer.frameLength))
+//        let pArray = Array<Int16>(printBuffer)
+//        debugPrint(pArray)
+//        debugPrint(status)
+//        debugPrint("========")
+
+        //
         if status == noErr && kLinearPCMFormatFlagIsBigEndian == ((sampleBuffer.formatDescription?.audioStreamBasicDescription?.mFormatFlags ?? 0) & kLinearPCMFormatFlagIsBigEndian) {
             if format.isInterleaved {
                 switch format.commonFormat {
@@ -66,12 +129,22 @@ final class IOAudioRingBuffer {
                 }
             }
         }
-        skip = numSamples(sampleBuffer)
-        appendAudioPCMBuffer(workingBuffer)
+
+//        skip = numSamples(sampleBuffer)
+//        appendAudioPCMBuffer(workingBuffer)
+        let distance = distance(sampleBuffer)
+        if 0 <= distance {
+            skip = distance
+        }
+        appendAudioPCMBuffer(workingBuffer, offset: offsetCount(sampleBuffer) / 8)
     }
 
     func appendAudioPCMBuffer(_ audioPCMBuffer: AVAudioPCMBuffer, offset: Int = 0) {
         let numSamples = min(Int(audioPCMBuffer.frameLength) - offset, Int(buffer.frameLength) - head)
+//        let printBuffer = UnsafeBufferPointer(start: audioPCMBuffer.int16ChannelData?.pointee, count: Int(audioPCMBuffer.frameLength))
+//        let array = Array<Int16>(printBuffer)
+//        debugPrint(array)
+//        debugPrint(offset)
 
         if #available(iOS 17.0, *) {
             SampleData.shared.append(numSamples)
@@ -121,6 +194,7 @@ final class IOAudioRingBuffer {
             guard let bufferList = UnsafeMutableAudioBufferListPointer(ioData) else {
                 return noErr
             }
+
             if format.isInterleaved {
                 let channelCount = Int(format.channelCount)
                 switch format.commonFormat {
@@ -147,17 +221,22 @@ final class IOAudioRingBuffer {
                     }
                 }
             }
+
             skip -= numSamples
             presentationTimeStamp = CMTimeAdd(presentationTimeStamp, CMTime(value: CMTimeValue(numSamples), timescale: presentationTimeStamp.timescale))
+            
             if 0 < inNumberFrames - UInt32(numSamples) {
                 return render(inNumberFrames - UInt32(numSamples), ioData: ioData, offset: numSamples)
             }
+
             return noErr
         }
+        
         let numSamples = min(Int(inNumberFrames), Int(buffer.frameLength) - tail)
         guard let bufferList = UnsafeMutableAudioBufferListPointer(ioData), head != tail else {
             return noErr
         }
+
         if format.isInterleaved {
             let channelCount = Int(format.channelCount)
             switch format.commonFormat {
@@ -184,24 +263,46 @@ final class IOAudioRingBuffer {
                 }
             }
         }
+        
         tail += numSamples
         presentationTimeStamp = CMTimeAdd(presentationTimeStamp, CMTime(value: CMTimeValue(numSamples), timescale: presentationTimeStamp.timescale))
+        
         if tail == buffer.frameLength {
             tail = 0
             if 0 < inNumberFrames - UInt32(numSamples) {
                 return render(inNumberFrames - UInt32(numSamples), ioData: ioData, offset: numSamples)
             }
         }
+
         return noErr
     }
 
-    private func numSamples(_ sampleBuffer: CMSampleBuffer) -> Int {
+    private func offsetCount(_ sampleBuffer: CMSampleBuffer) -> Int {
+        let data = sampleBuffer.dataBuffer?.data?.bytes ?? []
+        let count = 0
+        
+        for i in 0..<data.count {
+            guard data.count > i * 2 * 4 else { break }
+
+            if (data[i * 2 * 4] != 0) {
+                return i * 2 * 4
+            }
+        }
+
+        return count
+    }
+
+//    private func numSamples(_ sampleBuffer: CMSampleBuffer) -> Int {
+    private func distance(_ sampleBuffer: CMSampleBuffer) -> Int {
         // Device audioMic or ReplayKit audioMic.
         let sampleRate = Int32(format.sampleRate)
+        
         if presentationTimeStamp.timescale == sampleRate {
             let presentationTimeStamp = CMTimeAdd(presentationTimeStamp, CMTime(value: CMTimeValue(counts), timescale: presentationTimeStamp.timescale))
-            return max(Int(sampleBuffer.presentationTimeStamp.value - presentationTimeStamp.value), 0)
+//            return max(Int(sampleBuffer.presentationTimeStamp.value - presentationTimeStamp.value), 0)
+            return Int(sampleBuffer.presentationTimeStamp.value - presentationTimeStamp.value)
         }
+
         return 0
     }
 }

@@ -76,6 +76,10 @@ final class IOAudioResampler<T: IOAudioResamplerDelegate> {
                 }
                 delegate?.resampler(self, didOutput: outputBuffer, presentationTimeStamp: presentationTimeStamp)
                 self.presentationTimeStamp = CMTimeAdd(presentationTimeStamp, .init(value: 1024, timescale: sampleRate))
+
+//                let printBuffer = UnsafeBufferPointer(start: outputBuffer.int16ChannelData?.pointee, count: Int(outputBuffer.frameLength))
+//                let array = Array<Int16>(printBuffer)
+//                debugPrint(array)
             case .error:
                 if let error {
                     delegate?.resampler(self, errorOccurred: .failedToConvert(error: error))
@@ -89,6 +93,17 @@ final class IOAudioResampler<T: IOAudioResamplerDelegate> {
     private func setUp(_ inSourceFormat: inout AudioStreamBasicDescription) {
         let inputFormat = AVAudioFormatFactory.makeAudioFormat(&inSourceFormat)
         let outputFormat = settings.makeOutputFormat(inputFormat) ?? inputFormat
+
+//        debugPrint("++++++++++++++++++")
+//        debugPrint("mChannelsPerFrame \(inSourceFormat.mChannelsPerFrame) \n| mSampleRate \(inSourceFormat.mSampleRate) \n| mFormatID \(inSourceFormat.mFormatID) \n| mBitsPerChannel \(inSourceFormat.mBitsPerChannel) \n| mBytesPerFrame \(inSourceFormat.mBytesPerFrame)  \n| mFormatFlags \(inSourceFormat.mFormatFlags) \n| mBytesPerPacket \(inSourceFormat.mBytesPerPacket) \n| mFramesPerPacket \(inSourceFormat.mFramesPerPacket) \n| mReserved \(inSourceFormat.mReserved)")
+//        let iformat = inputFormat?.streamDescription.pointee
+//        debugPrint("mChannelsPerFrame \(iformat!.mChannelsPerFrame) \n| mSampleRate \(iformat!.mSampleRate) \n| mFormatID \(iformat!.mFormatID) \n| mBitsPerChannel \(iformat!.mBitsPerChannel) \n| mBytesPerFrame \(iformat!.mBytesPerFrame)  \n| mFormatFlags \(iformat!.mFormatFlags) \n| mBytesPerPacket \(iformat!.mBytesPerPacket) \n| mFramesPerPacket \(iformat!.mFramesPerPacket) \n| mReserved \(iformat!.mReserved)")
+//        let oformat = outputFormat!.streamDescription.pointee
+//        debugPrint("mChannelsPerFrame \(oformat.mChannelsPerFrame) \n| mSampleRate \(oformat.mSampleRate) \n| mFormatID \(oformat.mFormatID) \n| mBitsPerChannel \(oformat.mBitsPerChannel) \n| mBytesPerFrame \(oformat.mBytesPerFrame)  \n| mFormatFlags \(oformat.mFormatFlags) \n| mBytesPerPacket \(oformat.mBytesPerPacket) \n| mFramesPerPacket \(oformat.mFramesPerPacket) \n| mReserved \(oformat.mReserved)")
+//        debugPrint(inputFormat)
+//        debugPrint(outputFormat)
+//        debugPrint("++++++++++++++++++")
+
         ringBuffer = .init(&inSourceFormat)
         if let inputFormat {
             inputBuffer = .init(pcmFormat: inputFormat, frameCapacity: 1024 * 4)

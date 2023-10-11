@@ -110,6 +110,14 @@ extension IOAudioUnit: AVCaptureAudioDataOutputSampleBufferDelegate {
         guard mixer?.useSampleBuffer(sampleBuffer: sampleBuffer, mediaType: AVMediaType.audio) == true else {
             return
         }
+
+        // TODO Create class Cleaner qui prend en input le sampleBuffer et retourne un sampleBuffer clean
+        // Faire un passe plat par défaut, et ne faire des modifs que dans certaines conditions
+        // If no zeros => [PTS suivant] = [PTS actuel] + [num samples actuel]
+        // If zeros =>
+        //      - [PTS suivant] = [PTS actuel] + [num samples actuel] - [nombre de zéros enlevés]
+        //      - enlever les zéros du début du buffer
+
         appendSampleBuffer(sampleBuffer)
     }
 }
